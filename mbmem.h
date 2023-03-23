@@ -2,8 +2,6 @@
 extern "C" {
 #endif // __cplusplus
 
-#define MBMEM_H_IMPLEMENTATIONS
-
 struct Arena {
 	const char    *buf;
 	unsigned long buf_len;
