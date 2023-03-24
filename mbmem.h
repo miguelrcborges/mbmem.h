@@ -28,18 +28,18 @@ void Arena_init(Arena *a, const void *buf, unsigned long len) {
 void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements) {
 	unsigned long block = size * elements;
 	unsigned long left_pad = (size - a->curr_offset % size) % size;
-	if (a->curr_offset > a->buf_len - size - left_pad)
+	if (a->curr_offset > a->buf_len - block - left_pad)
 		return (void *) 0;
 
 	a->curr_offset += left_pad;
 
 #ifndef MBMEM_H_NO_ZERO_ALLOC
-	for (unsigned long i = 0; i < size; ++i) {
+	for (unsigned long i = 0; i < block; ++i) {
 		((char *) a->buf)[a->curr_offset] = 0;
 	}
 #endif
 
-	a->curr_offset += size;
+	a->curr_offset += block;
 	return (void *) (a->buf + a->curr_offset); 
 }
 
