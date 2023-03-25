@@ -39,8 +39,9 @@ void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements) {
 	}
 #endif
 
+	void *ret_p = (void *) a->buf + a->curr_offset;
 	a->curr_offset += block;
-	return (void *) (a->buf + a->curr_offset); 
+	return ret_p;
 }
 
 void Arena_create_checkpoint(Arena *a) {
