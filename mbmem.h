@@ -35,7 +35,6 @@ void Pool_free(Pool *p, void *free);
 void Pool_reset(Pool *p);
 
 
-#define MBMEM_H_IMPLEMENTATIONS
 #ifdef MBMEM_H_IMPLEMENTATIONS
 void Arena_init(Arena *a, const void *buf, unsigned long len) {
 	a->buf = (char *)buf;
