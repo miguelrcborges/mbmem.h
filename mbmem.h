@@ -1,8 +1,31 @@
+#ifndef MBMEM_H
+#define MBMEM_H
+
+#ifdef MBMEM_STATIC
+#define MBMEM_DEF static
+#else
+#define MBMEM_DEF extern
+#endif /* MBMEM_STATIC */
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 typedef struct Arena Arena;
+typedef struct Pool Pool;
+typedef struct Pool_free_node Pool_free_node;
+
+MBMEM_DEF void Arena_init(Arena *a, const void *buf, unsigned long len);
+MBMEM_DEF void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements);
+MBMEM_DEF void Arena_create_checkpoint(Arena *a);
+MBMEM_DEF void Arena_rollback_to_checkpoint(Arena *a);
+MBMEM_DEF void Arena_reset(Arena *a);
+
+MBMEM_DEF void Pool_init(Pool *p, void *buf, unsigned long chunk_size, unsigned long len);
+MBMEM_DEF void *Pool_alloc(Pool *p);
+MBMEM_DEF void Pool_free(Pool *p, void *free);
+MBMEM_DEF void Pool_reset(Pool *p);
+
 struct Arena {
 	const char    *buf;
 	unsigned long buf_len;
@@ -10,18 +33,10 @@ struct Arena {
 	unsigned long checkpoint;
 };
 
-void Arena_init(Arena *a, const void *buf, unsigned long len);
-void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements);
-void Arena_create_checkpoint(Arena *a);
-void Arena_rollback_to_checkpoint(Arena *a);
-void Arena_reset(Arena *a);
-
-typedef struct Pool_free_node Pool_free_node;
 struct Pool_free_node {
 	Pool_free_node *next;
 };
 
-typedef struct Pool Pool;
 struct Pool {
 	const char     *buf;
 	Pool_free_node *next;
@@ -29,13 +44,9 @@ struct Pool {
 	unsigned long  chunk_size;
 };
 
-void Pool_init(Pool *p, void *buf, unsigned long chunk_size, unsigned long len);
-void *Pool_alloc(Pool *p);
-void Pool_free(Pool *p, void *free);
-void Pool_reset(Pool *p);
-
 
 #ifdef MBMEM_H_IMPLEMENTATIONS
+
 void Arena_init(Arena *a, const void *buf, unsigned long len) {
 	a->buf = (char *)buf;
 	a->buf_len = len;
@@ -120,8 +131,10 @@ void Pool_reset(Pool *p) {
 
 	p->next = (Pool_free_node *) p->buf;
 }
-#endif // MBMEM_H_IMPLEMENTATIONS
+#endif /* MBMEM_H_IMPLEMENTATIONS */
 
 #ifdef __cplusplus
 }
-#endif // __cplusplus
+#endif /* __cplusplus */
+
+#endif /* MBMEM_H */
