@@ -42,7 +42,6 @@ struct NNOutput {
 };
 
 
-#define MBNN_H_IMPLEMENTATIONS
 #ifdef MBNN_H_IMPLEMENTATIONS
 
 #ifndef ALLOC
