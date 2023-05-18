@@ -9,6 +9,10 @@
 #define MBNN_DEF extern
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct NNLayer NNLayer;
 typedef struct NNOutput NNOutput;
 typedef union GenericTarget GenericTarget;
@@ -32,7 +36,6 @@ struct NNLayer {
 	__m256 *weights;
 	float *bias;
 	GenericTarget target;
-	void *trash;
 };
 
 struct NNOutput {
@@ -40,6 +43,10 @@ struct NNOutput {
 	unsigned int isOutput;
 	__m256 *neurons;
 };
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 
 #ifdef MBNN_H_IMPLEMENTATIONS
@@ -95,7 +102,7 @@ void NN_Compute(NNLayer *l) {
 	while (!l->isOutput) {
 		for (size_t i = 0; i < l->target.nnlayer->nNeurons; ++i) {
 			float result = l->bias[i];
-			for (size_t ii = 0; ii < avx_ops_per_neuron; ii += 8) {
+			for (size_t ii = 0; ii < avx_ops_per_neuron; ii += 1) {
 				result += _mm256_reduce_add_ps(_mm256_mul_ps(l->neurons[ii], l->weights[avx_ops_per_neuron * i + ii]));
 			}
 			l->target.nnlayer->neurons[i / 8][i % 8] = result;

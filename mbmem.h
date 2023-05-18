@@ -44,6 +44,10 @@ struct Pool {
 	unsigned long  chunk_size;
 };
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 
 #ifdef MBMEM_H_IMPLEMENTATIONS
 
@@ -132,9 +136,5 @@ void Pool_reset(Pool *p) {
 	p->next = (Pool_free_node *) p->buf;
 }
 #endif /* MBMEM_H_IMPLEMENTATIONS */
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* MBMEM_H */
