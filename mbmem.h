@@ -56,7 +56,7 @@ void Arena_init(Arena *a, const void *buf, unsigned long len) {
 
 void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements) {
 	unsigned long block = size * elements;
-	unsigned long left_pad = (size - a->curr_offset % size) % size;
+	unsigned long left_pad = (size - (a->buf + a->curr_offset) % size) % size;
 	if (a->curr_offset > a->buf_len - block - left_pad)
 		return (void *) 0;
 

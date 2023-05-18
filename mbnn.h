@@ -16,7 +16,9 @@ typedef union GenericTarget GenericTarget;
 static inline float _mm256_reduce_add_ps(__m256 x);
 MBNN_DEF NNLayer *NN_Layer_create(unsigned int size);
 MBNN_DEF NNOutput *NN_Output_create(unsigned int size);
+MBNN_DEF void NN_Initialize_Neurons(NNLayer *base, float *values, unsigned int nElems);
 MBNN_DEF void NN_Connect(NNLayer *base, GenericTarget target);
+MBNN_DEF void NN_Compute(NNLayer *l);
 
 union GenericTarget {
 	NNLayer *nnlayer;
@@ -30,6 +32,7 @@ struct NNLayer {
 	__m256 *weights;
 	float *bias;
 	GenericTarget target;
+	void *trash;
 };
 
 struct NNOutput {
@@ -39,7 +42,12 @@ struct NNOutput {
 };
 
 
+#define MBNN_H_IMPLEMENTATIONS
 #ifdef MBNN_H_IMPLEMENTATIONS
+
+#ifndef ALLOC
+#define ALLOC(ALIGNMENT, AMOUNT) aligned_alloc(ALIGNMENT, AMOUNT)
+#endif /* ALLOC */
 
 inline float _mm256_reduce_add_ps(__m256 x) {
     const __m128 x128 = _mm_add_ps(_mm256_extractf128_ps(x, 1), _mm256_castps256_ps128(x));
@@ -49,22 +57,22 @@ inline float _mm256_reduce_add_ps(__m256 x) {
 }
 
 NNLayer *NN_Layer_create(unsigned int size) {
-	NNLayer *l = (NNLayer *)calloc(1, sizeof(NNLayer));
+	NNLayer *l = (NNLayer *)ALLOC(64, sizeof(NNLayer));
 	if (size % 8 != 0) {
 		size += 8 - size % 8;
 	}
-	l->neurons = (__m256 *)calloc(size / 8, sizeof(__m256));
+	l->neurons = (__m256 *)ALLOC(sizeof(__m256), (sizeof(__m256) / 8) * size);
 	l->nNeurons = size;
 	l->isOutput = 0;
 	return l;
 }
 
 NNOutput *NN_Output_create(unsigned int size) {
-	NNOutput *o = (NNOutput *)calloc(1, sizeof(NNLayer));
+	NNOutput *o = (NNOutput *)ALLOC(1, sizeof(NNLayer));
 	if (size % 8 != 0) {
 		size += 8 - size % 8;
 	}
-	o->neurons = (__m256 *)calloc(size / 8, sizeof(__m256));
+	o->neurons = (__m256 *)ALLOC(sizeof(__m256), (sizeof(__m256) / 8) * size);
 	o->nNeurons = size;
 	o->isOutput = 1;
 	return o;
@@ -73,8 +81,8 @@ NNOutput *NN_Output_create(unsigned int size) {
 void NN_Connect(NNLayer *base, GenericTarget target) {
 	base->target = target;
 	unsigned int n_weights = base->nNeurons * target.nnoutput->nNeurons;
-	base->weights = (__m256 *)calloc(n_weights / 8, sizeof(__m256));
-	base->bias = (float *)calloc(target.nnoutput->nNeurons, sizeof(float));
+	base->weights = (__m256 *)ALLOC(sizeof(__m256), (sizeof(__m256) / 8) * n_weights);
+	base->bias = (float *)ALLOC(sizeof(float), sizeof(float) * target.nnoutput->nNeurons);
 }
 
 void NN_Initialize_Neurons(NNLayer *base, float *values, unsigned int nElems) {
