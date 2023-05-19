@@ -1,6 +1,8 @@
 #ifndef MBMEM_H
 #define MBMEM_H
 
+#include <stddef.h>
+
 #ifdef MBMEM_STATIC
 #define MBMEM_DEF static
 #else
@@ -9,14 +11,14 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+#endif /* __cplusplus */
 
 typedef struct Arena Arena;
 typedef struct Pool Pool;
 typedef struct Pool_free_node Pool_free_node;
 
 MBMEM_DEF void Arena_init(Arena *a, const void *buf, unsigned long len);
-MBMEM_DEF void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements);
+MBMEM_DEF void *Arena_alloc(Arena *a, unsigned long amount, unsigned long alignment);
 MBMEM_DEF void Arena_create_checkpoint(Arena *a);
 MBMEM_DEF void Arena_rollback_to_checkpoint(Arena *a);
 MBMEM_DEF void Arena_reset(Arena *a);
@@ -28,9 +30,9 @@ MBMEM_DEF void Pool_reset(Pool *p);
 
 struct Arena {
 	const char    *buf;
-	unsigned long buf_len;
-	unsigned long curr_offset;
-	unsigned long checkpoint;
+	size_t buf_len;
+	size_t curr_offset;
+	size_t checkpoint;
 };
 
 struct Pool_free_node {
@@ -40,40 +42,38 @@ struct Pool_free_node {
 struct Pool {
 	const char     *buf;
 	Pool_free_node *next;
-	unsigned long  buf_len;
-	unsigned long  chunk_size;
+	size_t buf_len;
+	size_t chunk_size;
 };
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-
 #ifdef MBMEM_H_IMPLEMENTATIONS
 
-void Arena_init(Arena *a, const void *buf, unsigned long len) {
+void Arena_init(Arena *a, const void *buf, size_t len) {
 	a->buf = (char *)buf;
 	a->buf_len = len;
 	a->curr_offset = 0;
 	a->checkpoint = 0;
 }
 
-void *Arena_alloc(Arena *a, unsigned long size, unsigned long elements) {
-	unsigned long block = size * elements;
-	unsigned long left_pad = (size - (a->buf + a->curr_offset) % size) % size;
-	if (a->curr_offset > a->buf_len - block - left_pad)
+void *Arena_alloc(Arena *a, size_t amount, size_t alignment) {
+	unsigned long left_pad = (alignment - ((size_t) a->buf + a->curr_offset) % alignment) % alignment;
+	if (a->curr_offset > a->buf_len - amount - left_pad)
 		return (void *) 0;
 
 	a->curr_offset += left_pad;
 
 #ifndef MBMEM_H_NO_ZERO_ALLOC
-	for (unsigned long i = 0; i < block; ++i) {
+	for (unsigned long i = 0; i < amount; ++i) {
 		((char *) a->buf)[a->curr_offset + i] = 0;
 	}
 #endif
 
 	void *ret_p = (void *) (a->buf + a->curr_offset);
-	a->curr_offset += block;
+	a->curr_offset += amount;
 	return ret_p;
 }
 
@@ -91,7 +91,7 @@ void Arena_reset(Arena *a) {
 }
 
 
-void Pool_init(Pool *p, void *buf, unsigned long chunk_size, unsigned long len) {
+void Pool_init(Pool *p, void *buf, size_t chunk_size, size_t len) {
 	if (chunk_size < sizeof(Pool_free_node *))
 		chunk_size = sizeof(Pool_free_node *);
 
