@@ -6,7 +6,7 @@
 
 Arena arena;
 
-#define ALLOC(ALIGNMENT, AMOUNT) Arena_alloc(&arena, AMOUNT, ALIGNMENT)
+#define ALLOC(ALIGNMENT, AMOUNT) Arena_nozero_alloc(&arena, AMOUNT, ALIGNMENT)
 #define MBNN_H_IMPLEMENTATIONS
 #include "../mbnn.h"
 
@@ -14,7 +14,8 @@ Arena arena;
 
 enum {
 	OUTPUT_NEURONS_AMOUNT = 8,
-	START_NEURONS_AMOUNT = 4096,
+	HIDDEN_LAYERS = 100,
+	START_NEURONS_AMOUNT = 512,
 } Neurons_Amount; 
 
 enum {
@@ -25,14 +26,14 @@ int main(void) {
 	char *arena_buf = malloc(ARENA_SIZE);
 
 	if (arena_buf == NULL) {
-		return 1;
+	 	return 1;
 	}
 
 	Arena_init(&arena, arena_buf, ARENA_SIZE);
 	NNLayer *start = NN_Layer_create(START_NEURONS_AMOUNT);
 	NNLayer *cursor = start;
 
-	for (size_t i = 0; i < 10; ++i) {
+	for (size_t i = 0; i < HIDDEN_LAYERS; ++i) {
 		NNLayer *tmp = NN_Layer_create(START_NEURONS_AMOUNT);
 		NN_Connect(cursor, (GenericTarget) {.nnlayer = tmp});
 		for (size_t i = 0; i < cursor->target.nnlayer->nNeurons; ++i) {
@@ -47,7 +48,7 @@ int main(void) {
 		cursor->bias[i] = 1.0f;
 	}
 
-
+	for (size_t i = 0; i < 100; ++i)
 	NN_Compute(start);
 
 	printf("Results:\n");

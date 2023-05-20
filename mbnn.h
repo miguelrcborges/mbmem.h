@@ -63,7 +63,7 @@ inline float _mm256_reduce_add_ps(__m256 x) {
 }
 
 NNLayer *NN_Layer_create(unsigned int size) {
-	NNLayer *l = (NNLayer *)ALLOC(64, sizeof(NNLayer));
+	NNLayer *l = (NNLayer *)ALLOC(8, sizeof(NNLayer));
 	if (size % 8 != 0) {
 		size += 8 - size % 8;
 	}
@@ -74,7 +74,7 @@ NNLayer *NN_Layer_create(unsigned int size) {
 }
 
 NNOutput *NN_Output_create(unsigned int size) {
-	NNOutput *o = (NNOutput *)ALLOC(1, sizeof(NNLayer));
+	NNOutput *o = (NNOutput *)ALLOC(8, sizeof(NNOutput));
 	if (size % 8 != 0) {
 		size += 8 - size % 8;
 	}
@@ -97,19 +97,21 @@ void NN_Initialize_Neurons(NNLayer *base, float *values, unsigned int nElems) {
 	}
 }
 
-void NN_Compute(NNLayer *l) {
-	const int avx_ops_per_neuron = l->nNeurons / 8;
-	while (!l->isOutput) {
-		for (size_t i = 0; i < l->target.nnlayer->nNeurons; ++i) {
-			float result = l->bias[i];
+void NN_Compute(NNLayer *start) {
+	const int avx_ops_per_neuron = start->nNeurons / 8;
+	while (!start->isOutput) {
+		for (size_t i = 0; i < start->target.nnlayer->nNeurons; ++i) {
+			__m256 accumulator = { 0 };
 			for (size_t ii = 0; ii < avx_ops_per_neuron; ii += 1) {
-				result += _mm256_reduce_add_ps(_mm256_mul_ps(l->neurons[ii], l->weights[avx_ops_per_neuron * i + ii]));
+				accumulator = _mm256_add_ps(_mm256_mul_ps(start->neurons[ii], start->weights[avx_ops_per_neuron * i + ii]), accumulator);
 			}
-			l->target.nnlayer->neurons[i / 8][i % 8] = result;
+			start->target.nnlayer->neurons[i / 8][i % 8] = start->bias[i] + _mm256_reduce_add_ps(accumulator);
 		}
-		l = l->target.nnlayer;
+		start = start->target.nnlayer;
 	}
 }
+
+void NN_Train(NNLayer *start, unsigned int generations, __m256 inputs);
 
 #endif /* MBNN_H_IMPLEMENTATIONS */
 
