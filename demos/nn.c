@@ -14,31 +14,39 @@ Arena arena;
 
 enum {
 	OUTPUT_NEURONS_AMOUNT = 8,
-	START_NEURONS_AMOUNT = 1024,
+	START_NEURONS_AMOUNT = 4096,
 } Neurons_Amount; 
 
 enum {
-	ARENA_SIZE = 1048576,
+	ARENA_SIZE = 1000000000,
 };
 
 int main(void) {
 	char *arena_buf = malloc(ARENA_SIZE);
+
 	if (arena_buf == NULL) {
 		return 1;
 	}
+
 	Arena_init(&arena, arena_buf, ARENA_SIZE);
-
 	NNLayer *start = NN_Layer_create(START_NEURONS_AMOUNT);
+	NNLayer *cursor = start;
+
+	for (size_t i = 0; i < 10; ++i) {
+		NNLayer *tmp = NN_Layer_create(START_NEURONS_AMOUNT);
+		NN_Connect(cursor, (GenericTarget) {.nnlayer = tmp});
+		for (size_t i = 0; i < cursor->target.nnlayer->nNeurons; ++i) {
+			cursor->bias[i] = 1.0f;
+		}
+		cursor = cursor->target.nnlayer;
+	}
+
 	NNOutput *output = NN_Output_create(OUTPUT_NEURONS_AMOUNT);
-	NN_Connect(start, (GenericTarget) {.nnoutput = output});
-
-	for (size_t i = 0; i < START_NEURONS_AMOUNT; ++i) {
-		start->bias[i] = (float) i;
+	NN_Connect(cursor, (GenericTarget) {.nnoutput = output});
+	for (size_t i = 0; i < output->nNeurons; ++i) {
+		cursor->bias[i] = 1.0f;
 	}
 
-	for (size_t i = 0; i < START_NEURONS_AMOUNT * OUTPUT_NEURONS_AMOUNT; ++i) {
-		start->weights[i / 8][i % 8] = 0.1f;
-	}
 
 	NN_Compute(start);
 
