@@ -14,6 +14,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef struct Arena Arena;
+typedef struct Arena_checkpoint Arena_checkpoint;
 typedef struct Pool Pool;
 typedef struct Pool_free_node Pool_free_node;
 
@@ -29,10 +30,15 @@ MBMEM_DEF void Pool_free(Pool *p, void *free);
 MBMEM_DEF void Pool_reset(Pool *p);
 
 struct Arena {
-	const char    *buf;
+	const char *buf;
+	Arena_checkpoint *checkpoint;
 	size_t buf_len;
 	size_t curr_offset;
-	size_t checkpoint;
+};
+
+struct Arena_checkpoint {
+	Arena_checkpoint *previous;
+	size_t offset;
 };
 
 struct Pool_free_node {
@@ -56,11 +62,13 @@ void Arena_init(Arena *a, const void *buf, size_t len) {
 	a->buf = (char *)buf;
 	a->buf_len = len;
 	a->curr_offset = 0;
-	a->checkpoint = 0;
+	a->checkpoint = NULL;
 }
 
 void *Arena_alloc(Arena *a, size_t amount, size_t alignment) {
-	unsigned long left_pad = (alignment - ((size_t) a->buf + a->curr_offset) % alignment) % alignment;
+	size_t curr_poiter = (size_t) a->buf + a->curr_offset;
+	size_t left_pad = alignment - (curr_poiter & (alignment - 1));
+
 	if (a->curr_offset > a->buf_len - amount - left_pad)
 		return (void *) 0;
 
@@ -78,11 +86,18 @@ void *Arena_alloc(Arena *a, size_t amount, size_t alignment) {
 }
 
 void Arena_create_checkpoint(Arena *a) {
-	a->checkpoint = a->curr_offset;
+	Arena_checkpoint *p = (Arena_checkpoint *)Arena_alloc(a, sizeof(Arena_checkpoint), sizeof(Arena_checkpoint));
+	p->previous = a->checkpoint;
+	a->checkpoint = p;
 }
 
 void Arena_rollback_to_checkpoint(Arena *a) {
-	a->curr_offset = a->checkpoint;
+	if (a->checkpoint == NULL) {
+		a->curr_offset = 0;
+		return;
+	}
+	a->curr_offset = a->checkpoint->offset;
+	a->checkpoint = a->checkpoint->previous;
 }
 
 void Arena_reset(Arena *a) {
